@@ -1,0 +1,120 @@
+<project name="FH Wedel - Übg. AuD/FOOP" xmlns:if="ant:if" default="all">
+  <description>
+    Build-Konfiguration für Aufgaben der Übungen
+    Algorithmen und Datenstrukturen /
+    Fortgeschrittene Objektorientierte Programmierung
+  </description>
+
+  <!-- directories -->
+  <property name="src.dir"  location="src"/>
+  <property name="test.dir" location="test"/>
+  <property name="lib.dir"  location="lib"/>
+  <property name="out.dir"  location="out"/>
+  <property name="doc.dir"  location="doc"/>
+
+  <!-- tools -->
+  <property name="junit.jar"      location="${lib.dir}/junit-platform-console-standalone-1.11.2.jar"/>
+  <property name="checkstyle.jar" location="${lib.dir}/checkstyle-11.1.0-all.jar"/>
+
+  <!-- compiler configuration -->
+  <property name="javac.encoding"     value="UTF-8"/>
+  <property name="javac.release"      value="17"/>
+  <property name="javac.compilerargs" value="-Xlint:all -Xlint:-options -Xlint:-serial"/>
+
+  <!-- checkstyle configuration -->
+  <property name="checkstyle.config" location="fh-checkstyle-config.xml"/>
+  <taskdef resource="com/puppycrawl/tools/checkstyle/ant/checkstyle-ant-task.properties" classpath="${checkstyle.jar}"/>
+
+  <!-- test configuration -->
+  <property name="test.suite" value="TestSuite"/>
+  <path id="test.classpath">
+    <pathelement path="${out.dir}"/>
+    <fileset dir="${lib.dir}" includes="*.jar"/>
+  </path>
+  <property name="test.report.filename" value="out/TestReport.txt"/> <!-- relative path -->
+
+  <!-- targets -->
+
+  <target name="all"
+          depends="compile, compile-tests, check, doc, test"
+          description="compile, run checkstyle, generate javadoc, run tests">
+  </target>
+
+  <target name="compile"
+          description="compile sources">
+    <mkdir dir="${out.dir}"/>
+    <javac release="${javac.release}"
+           encoding="${javac.encoding}"
+           srcdir="${src.dir}"
+           destdir="${out.dir}"
+           includeantruntime="false"
+           debug="true"
+           failonerror="true">
+      <compilerarg line="${javac.compilerargs} -Werror"/>
+    </javac>
+  </target>
+
+  <target name="compile-tests"
+          depends="compile"
+          description="compiles tests">
+    <javac release="${javac.release}"
+           encoding="${javac.encoding}"
+           srcdir="${test.dir}"
+           destdir="${out.dir}"
+           classpathref="test.classpath"
+           includeantruntime="false"
+           debug="true"
+           failonerror="true"
+           excludes="**/*DontCompile*.java **/*DoCompile*.java">
+      <compilerarg line="${javac.compilerargs}"/>
+    </javac>
+  </target>
+
+  <target name="check"
+          description="run checkstyle">
+    <checkstyle config="${checkstyle.config}" maxWarnings="0" failOnViolation="true">
+      <fileset dir="${src.dir}" includes="**/*.java"/>
+    </checkstyle>
+  </target>
+
+  <target name="doc"
+          description="generate javadoc documentation">
+    <javadoc destdir="${doc.dir}"
+             encoding="UTF-8" docencoding="UTF-8" charset="UTF-8"
+             author="true" use="true" failonerror="true">
+      <arg value="-quiet"/>
+      <arg value="-Xwerror"/> <!-- fail on warnings -->
+      <fileset dir="${src.dir}"/>
+      <tag name="pre"  scope="constructors,methods" description="Precondition"/>
+      <tag name="post" scope="constructors,methods" description="Postcondition"/>
+      <tag name="time" scope="constructors,methods" description="Runtime Complexity"/>
+    </javadoc>
+  </target>
+
+  <target name="test"
+          depends="compile-tests"
+          description="run junit tests">
+    <touch file="${test.report.filename}"/>
+    <junitlauncher failureProperty="test.failure" printSummary="true">
+      <classpath refid="test.classpath"/>
+      <test name="${test.suite}">
+        <fork>
+          <jvmarg value="-enableassertions"/>
+          <jvmarg value="-Xint"/> <!-- interpreted-only mode, disable optimization -->
+        </fork>
+        <listener type="legacy-brief" sendSysOut="true" sendSysErr="true" resultFile="${test.report.filename}"/>
+      </test>
+    </junitlauncher>
+    <loadfile if:set="test.failure" failonerror="false" srcfile="${test.report.filename}" property="test.report"/>
+    <echo if:set="test.failure" message="${test.report}"/>
+    <fail if:set="test.failure">test failed</fail>
+  </target>
+
+  <target name="clean"
+          description="clean up">
+    <delete dir="${out.dir}"/>
+    <delete dir="${doc.dir}"/>
+    <delete file="${test.report.filename}"/>
+  </target>
+
+</project>

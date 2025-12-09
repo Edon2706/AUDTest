@@ -4,6 +4,10 @@ import util.Util;
 import db.value.Value;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -22,6 +26,31 @@ public final class DBTable implements Comparable<DBTable> {
      * Bezeichner dieser Tabelle
      **/
     private final String id;
+
+    /**
+     * Spaltenbezeichner des Primärschlüssels
+     */
+    private final String primaryKeyColId;
+
+    /**
+     * Spaltenbezeichner in der Reihenfolge der Tabelle
+     */
+    private final List<String> columnIds;
+
+    /**
+     * Zuordnung von Spaltenbezeichnern zu ihren Indizes
+     */
+    private final Map<String, Integer> columnIndexMap;
+
+    /**
+     * Index des Primärschlüssels
+     */
+    private final int primaryKeyIndex;
+
+    /**
+     * Zeilen dieser Tabelle, Schlüssel ist der Primärschlüsselwert
+     */
+    private final Map<Value, List<Value>> rows;
 
 
     /**
@@ -44,8 +73,20 @@ public final class DBTable implements Comparable<DBTable> {
         assert primaryKeyColId != null : "primaryKeyColId is null";
         assert colIds != null : "colIds is null";
 
+        assert Util.isValidIdentifier(id) : "id is invalid";
+        assert Util.areValidIdentifiers(colIds) : "colIds contain invalid identifiers";
+        assert Util.areOnlyUniqueIdentifiers(colIds) : "colIds contain duplicates";
+        assert colIds.contains(primaryKeyColId) : "primary key not part of colIds";
+
         this.id = id;
-        // TODO: Implementierung
+        this.primaryKeyColId = primaryKeyColId;
+        this.columnIds = new ArrayList<>(colIds);
+        this.columnIndexMap = new HashMap<>();
+        for (int i = 0; i < this.columnIds.size(); i++) {
+            this.columnIndexMap.put(this.columnIds.get(i), i);
+        }
+        this.primaryKeyIndex = this.columnIndexMap.get(primaryKeyColId);
+        this.rows = new LinkedHashMap<>();
     }
 
     /**
@@ -54,7 +95,7 @@ public final class DBTable implements Comparable<DBTable> {
      * @return Bezeichner dieser Tabelle
      */
     public String getId() {
-        // TODO: Implementierung
+        return this.id;
     }
 
     /**
@@ -63,51 +104,47 @@ public final class DBTable implements Comparable<DBTable> {
      * @return Spaltenbezeichner des Primärschlüssels
      */
     public String getPrimaryKeyColumnId() {
-        // TODO: Implementierung
+        return this.primaryKeyColId;
     }
 
     /**
      * Liefert die Spaltenanzahl dieser Tabelle.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = 1.
      *
      * @return Spaltenanzahl dieser Tabelle
      */
     public int getNumOfColumns() {
-        // TODO: Implementierung
+        return this.columnIds.size();
     }
 
     /**
      * Liefert die Zeilenanzahl dieser Tabelle.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = 1.
      *
      * @return Zeilenanzahl dieser Tabelle
      */
     public int getNumOfRows() {
-        // TODO: Implementierung
+        return this.rows.size();
     }
 
     /**
      * Liefert alle Spaltenbezeichner dieser Tabelle. Die Reihenfolge entspricht dabei der Reihenfolge der Spalten in
      * der Tabelle.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = N.
      *
      * @return Spaltenbezeichner dieser Tabelle
      */
     public List<String> getColumnIds() {
-        // TODO: Implementierung
+        return new ArrayList<>(this.columnIds);
     }
 
     /**
      * Liefert die Zeile mit dem übergebenen Primärschlüssel.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = 1.
      *
      * @param primaryKey Primärschlüssel
      *
@@ -118,15 +155,14 @@ public final class DBTable implements Comparable<DBTable> {
      */
     public List<Value> getRowByPrimaryKey(Value primaryKey) {
         assert primaryKey != null : "primaryKey is null";
-        // TODO: Implementierung
+        return this.rows.get(primaryKey);
     }
 
     /**
      * Liefert den Wert in der Zeile mit dem übergebenen Primärschlüssel, der in der Spalte mit dem übergebenen
      * Spaltenbezeichner steht.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = 1.
      *
      * @param primaryKey Primärschlüssel
      * @param colId      Spaltenbezeichner
@@ -141,14 +177,20 @@ public final class DBTable implements Comparable<DBTable> {
     public Value getValueByPrimaryKey(Value primaryKey, String colId) {
         assert primaryKey != null : "primaryKey is null";
         assert colId != null : "colId is null";
-        // TODO: Implementierung
+        Integer index = this.columnIndexMap.get(colId);
+        assert index != null : "colId not part of this table";
+
+        List<Value> row = this.getRowByPrimaryKey(primaryKey);
+        if (row == null) {
+            return null;
+        }
+        return row.get(index);
     }
 
     /**
      * Prüft, ob diese Tabelle eine Spalte mit dem übergebenen Spaltenbezeichner hat.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = 1.
      *
      * @param colId Spaltenbezeichner, der geprüft wird
      *
@@ -159,14 +201,15 @@ public final class DBTable implements Comparable<DBTable> {
      */
     public boolean hasColumn(String colId) {
         assert colId != null : "colId is null";
-        // TODO: Implementierung
+        assert Util.isValidIdentifier(colId) : "invalid colId";
+        return this.columnIndexMap.containsKey(colId);
     }
 
     /**
      * Prüft, ob mindestens ein Spaltenbezeichner aus der übergebenen Liste ein Spaltenbezeichner dieser Tabelle ist.
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner der übergebenen Liste und f(N) =
-     * ??? TODO.
+     * N.
      *
      * @param colIds Spaltenbezeichner, die geprüft werden
      *
@@ -176,14 +219,18 @@ public final class DBTable implements Comparable<DBTable> {
      */
     public boolean hasAnyColumn(List<String> colIds) {
         assert colIds != null : "colIds is null";
-        // TODO: Implementierung
+        for (String colId : colIds) {
+            if (this.columnIndexMap.containsKey(colId)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * Prüft, ob alle Spaltenbezeichner aus der übergebenen Liste Spaltenbezeichner dieser Tabelle sind.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = N.
      *
      * @param colIds Spaltenbezeichner, die geprüft werden
      *
@@ -193,7 +240,12 @@ public final class DBTable implements Comparable<DBTable> {
      */
     public boolean hasAllColumns(List<String> colIds) {
         assert colIds != null : "colIds is null";
-        // TODO: Implementierung
+        for (String colId : colIds) {
+            if (!this.columnIndexMap.containsKey(colId)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -201,8 +253,7 @@ public final class DBTable implements Comparable<DBTable> {
      * bereits eine Zeile in dieser Tabelle existiert, die im Primärschlüssel identisch zu der neuen Zeile ist, passiert
      * nichts.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = 1.
      *
      * @param row Werte, für die neue Zeile
      *
@@ -213,14 +264,22 @@ public final class DBTable implements Comparable<DBTable> {
      */
     public DBTable appendRow(List<Value> row) {
         assert row != null : "row is null";
-        // TODO: Implementierung
+        assert row.size() == this.getNumOfColumns() : "row size does not match column count";
+
+        Value primaryKey = row.get(this.primaryKeyIndex);
+        if (this.rows.containsKey(primaryKey)) {
+            return this;
+        }
+
+        List<Value> storedRow = new ArrayList<>(row);
+        this.rows.put(primaryKey, storedRow);
+        return this;
     }
 
     /**
      * Entfernt alle Zeilen aus dieser Tabelle, bei denen die übergebene Bedingung erfüllt ist.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Zeilen in dieser Tabelle und f(N) = N.
      *
      * @param whereParam Bedingung
      *
@@ -231,7 +290,18 @@ public final class DBTable implements Comparable<DBTable> {
      */
     public DBTable removeRows(WhereParameter whereParam) {
         assert whereParam != null : "whereParam is null";
-        // TODO: Implementierung
+        assert this.columnIndexMap.containsKey(whereParam.colId()) : "colId not part of table";
+
+        int colIndex = this.columnIndexMap.get(whereParam.colId());
+        var iterator = this.rows.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<Value, List<Value>> entry = iterator.next();
+            Value value = entry.getValue().get(colIndex);
+            if (whereParam.predicate().test(value)) {
+                iterator.remove();
+            }
+        }
+        return this;
     }
 
     /**
@@ -240,7 +310,7 @@ public final class DBTable implements Comparable<DBTable> {
      * @post Diese Tabelle enthält keine Zeilen
      */
     public void removeAllRows() {
-        // TODO: Implementierung
+        this.rows.clear();
     }
 
     /**
@@ -251,8 +321,8 @@ public final class DBTable implements Comparable<DBTable> {
      * keine Spaltenbezeichner übergeben wurden, entspricht dies einem "SELECT *", es werden also alle Spalten
      * übernommen.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) =
+     * N + R, wobei R = Anzahl der vorhandenen Zeilen in dieser Tabelle.
      *
      * @param colIds      Spaltenbezeichner der Spalten, die selektiert werden sollen oder null, wenn alle Spalten
      *                    selektiert werden sollen
@@ -273,7 +343,46 @@ public final class DBTable implements Comparable<DBTable> {
     public DBTable select(List<String> colIds, List<WhereParameter> whereParams, String newTableId) {
         assert whereParams != null : "whereParams is null";
         assert newTableId != null : "newTableId is null";
-        // TODO: Implementierung
+        assert Util.isValidIdentifier(newTableId) : "newTableId invalid";
+
+        List<String> selectedCols;
+        if (colIds == null) {
+            selectedCols = new ArrayList<>(this.columnIds);
+        } else {
+            assert Util.areOnlyUniqueIdentifiers(colIds) : "colIds not unique";
+            assert this.hasAllColumns(colIds) : "colIds not part of table";
+            assert colIds.contains(this.primaryKeyColId) : "primary key missing";
+            selectedCols = new ArrayList<>(colIds);
+        }
+
+        DBTable newTable = new DBTable(newTableId, this.primaryKeyColId, selectedCols);
+
+        boolean hasConditions = !whereParams.isEmpty();
+        for (Map.Entry<Value, List<Value>> entry : this.rows.entrySet()) {
+            List<Value> row = entry.getValue();
+
+            boolean matches = !hasConditions;
+            if (hasConditions) {
+                for (WhereParameter where : whereParams) {
+                    assert this.columnIndexMap.containsKey(where.colId()) : "where column missing";
+                    Value value = row.get(this.columnIndexMap.get(where.colId()));
+                    if (where.predicate().test(value)) {
+                        matches = true;
+                        break;
+                    }
+                }
+            }
+
+            if (matches) {
+                List<Value> newRow = new ArrayList<>();
+                for (String colId : selectedCols) {
+                    newRow.add(row.get(this.columnIndexMap.get(colId)));
+                }
+                newTable.appendRow(newRow);
+            }
+        }
+
+        return newTable;
     }
 
     /**
@@ -282,8 +391,8 @@ public final class DBTable implements Comparable<DBTable> {
      * Der Wert wird in allen Zeilen aktualisiert, in denen alle übergebenen Bedingungen erfüllt sind. Wenn eine leere
      * Liste an Bedingungen übergeben wurde, wird der Wert in allen Zeilen aktualisiert.
      * <p>
-     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) = ???
-     * TODO.
+     * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Spaltenbezeichner dieser Tabelle und f(N) =
+     * N + R, wobei R = Anzahl der vorhandenen Zeilen in dieser Tabelle.
      *
      * @param colId       Spaltenbezeichner der Spalte, in der der Wert aktualisiert werden soll
      * @param newValue    Neuer Wert
@@ -302,7 +411,33 @@ public final class DBTable implements Comparable<DBTable> {
         assert colId != null : "colId is null";
         assert newValue != null : "newValue is null";
         assert whereParams != null : "whereParams is null";
-        // TODO: Implementierung
+        assert this.columnIndexMap.containsKey(colId) : "colId not part of table";
+        assert !this.primaryKeyColId.equals(colId) : "colId is primary key";
+
+        int targetIndex = this.columnIndexMap.get(colId);
+        boolean hasConditions = !whereParams.isEmpty();
+
+        for (Map.Entry<Value, List<Value>> entry : this.rows.entrySet()) {
+            List<Value> row = entry.getValue();
+
+            boolean matches = true;
+            if (hasConditions) {
+                for (WhereParameter where : whereParams) {
+                    assert this.columnIndexMap.containsKey(where.colId()) : "where column missing";
+                    Value value = row.get(this.columnIndexMap.get(where.colId()));
+                    if (!where.predicate().test(value)) {
+                        matches = false;
+                        break;
+                    }
+                }
+            }
+
+            if (matches) {
+                row.set(targetIndex, newValue);
+            }
+        }
+
+        return this;
     }
 
 
@@ -321,7 +456,7 @@ public final class DBTable implements Comparable<DBTable> {
      * Namen dieser Tabelle, einem Unterstrich und dem Spaltenbezeichner des Primärschlüssels dieser Tabelle.
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der Zeilen der übergebenen Tabelle und f(N) = ???
-     * TODO.
+     * R, wobei R = Anzahl der Zeilen dieser Tabelle.
      *
      * @param other      Tabelle, die mit dieser Tabelle gejoint werden soll
      * @param fkColId    Spaltenbezeichner des Fremdschlüssels dieser Tabelle
@@ -341,7 +476,55 @@ public final class DBTable implements Comparable<DBTable> {
         assert fkColId != null : "fkColId is null";
         assert newTableId != null : "newTableId is null";
 
-        // TODO: Implementierung
+        assert !fkColId.equals(this.primaryKeyColId) : "fkColId is primary key";
+        assert this.columnIndexMap.containsKey(fkColId) : "fkColId missing";
+        assert Util.isValidIdentifier(newTableId) : "newTableId invalid";
+
+        String newPrimaryKey = this.id + "_" + this.primaryKeyColId;
+
+        List<String> newColIds = new ArrayList<>();
+        for (String colId : this.columnIds) {
+            if (!colId.equals(fkColId)) {
+                newColIds.add(this.id + "_" + colId);
+            }
+        }
+        for (String colId : other.columnIds) {
+            if (!colId.equals(other.primaryKeyColId)) {
+                newColIds.add(other.id + "_" + colId);
+            }
+        }
+
+        DBTable newTable = new DBTable(newTableId, newPrimaryKey, newColIds);
+
+        int fkIndex = this.columnIndexMap.get(fkColId);
+        int otherPkIndex = other.columnIndexMap.get(other.primaryKeyColId);
+
+        for (Map.Entry<Value, List<Value>> entry : this.rows.entrySet()) {
+            List<Value> thisRow = entry.getValue();
+            Value fkValue = thisRow.get(fkIndex);
+            List<Value> otherRow = other.getRowByPrimaryKey(fkValue);
+            if (otherRow == null) {
+                continue;
+            }
+
+            List<Value> newRow = new ArrayList<>();
+            for (int i = 0; i < this.columnIds.size(); i++) {
+                if (i == fkIndex) {
+                    continue;
+                }
+                newRow.add(thisRow.get(i));
+            }
+            for (int i = 0; i < other.columnIds.size(); i++) {
+                if (i == otherPkIndex) {
+                    continue;
+                }
+                newRow.add(otherRow.get(i));
+            }
+
+            newTable.appendRow(newRow);
+        }
+
+        return newTable;
     }
 
     /**
@@ -392,7 +575,73 @@ public final class DBTable implements Comparable<DBTable> {
      */
     @Override
     public String toString() {
-        // TODO: Implementierung
+        StringBuilder builder = new StringBuilder();
+        builder.append("Tabellenbezeichner: ").append(this.id).append('\n');
+        builder.append("Primärschlüssel: ").append(this.primaryKeyColId).append('\n');
+        builder.append('\n');
+
+        int columnCount = this.columnIds.size();
+        int[] widths = new int[columnCount];
+        for (int i = 0; i < columnCount; i++) {
+            widths[i] = this.columnIds.get(i).length();
+        }
+
+        for (List<Value> row : this.rows.values()) {
+            for (int i = 0; i < columnCount; i++) {
+                String valueStr = sanitizeValue(row.get(i).toString());
+                if (valueStr.length() > widths[i]) {
+                    widths[i] = valueStr.length();
+                }
+            }
+        }
+
+        builder.append(formatRow(this.columnIds, widths)).append('\n');
+        builder.append(formatSeparator(widths)).append('\n');
+
+        for (List<Value> row : this.rows.values()) {
+            List<String> values = new ArrayList<>();
+            for (Value value : row) {
+                values.add(sanitizeValue(value.toString()));
+            }
+            builder.append(formatRow(values, widths)).append('\n');
+        }
+
+        return builder.toString();
+    }
+
+    private static String sanitizeValue(String value) {
+        return value.replace("\r", " ").replace("\n", " ");
+    }
+
+    private static String formatRow(List<String> values, int[] widths) {
+        StringBuilder rowBuilder = new StringBuilder();
+        for (int i = 0; i < values.size(); i++) {
+            rowBuilder.append("| ");
+            rowBuilder.append(padRight(values.get(i), widths[i]));
+            rowBuilder.append(' ');
+        }
+        rowBuilder.append('|');
+        return rowBuilder.toString();
+    }
+
+    private static String formatSeparator(int[] widths) {
+        StringBuilder builder = new StringBuilder();
+        for (int width : widths) {
+            builder.append('|');
+            for (int i = 0; i < width + 2; i++) {
+                builder.append('-');
+            }
+        }
+        builder.append('|');
+        return builder.toString();
+    }
+
+    private static String padRight(String value, int width) {
+        StringBuilder builder = new StringBuilder(value);
+        while (builder.length() < width) {
+            builder.append(' ');
+        }
+        return builder.toString();
     }
 
     @Override

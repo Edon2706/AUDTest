@@ -3,6 +3,9 @@ package db;
 import util.Util;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
 
 /**
  * Diese Klasse repräsentiert eine Datenbank.
@@ -19,6 +22,11 @@ public final class DB {
      */
     private final String id;
 
+    /**
+     * Tabellen, sortiert nach ihrem Bezeichner
+     */
+    private final Map<String, DBTable> tables;
+
 
     /**
      * Konstruktor
@@ -31,8 +39,10 @@ public final class DB {
     public DB(String id) {
         assert id != null : "id is null";
 
+        assert Util.isValidIdentifier(id) : "id invalid";
+
         this.id = id;
-        // TODO: Implementierung
+        this.tables = new TreeMap<>();
     }
 
     /**
@@ -41,7 +51,7 @@ public final class DB {
      * @return Bezeichner dieser Datenbank
      */
     public String getId() {
-        // TODO: Implementierung
+        return this.id;
     }
 
     /**
@@ -50,14 +60,14 @@ public final class DB {
      * @return Anzahl der Tabellen in dieser Datenbank
      */
     public int getNumOfTables() {
-        // TODO: Implementierung
+        return this.tables.size();
     }
 
     /**
      * Liefert die Tabelle mit dem übergebenen Tabellenbezeichner oder null, wenn es keine gibt.
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Tabellen in dieser Datenbank und f(N) =
-     * ??? TODO.
+     * log(N).
      *
      * @param tableId Tabellenbezeichner der Tabelle, die zurückgegeben werden soll
      *
@@ -68,19 +78,20 @@ public final class DB {
      */
     public DBTable getTable(String tableId) {
         assert tableId != null : "tableId is null";
-        // TODO: Implementierung
+        assert Util.isValidIdentifier(tableId) : "invalid tableId";
+        return this.tables.get(tableId);
     }
 
     /**
      * Liefert aller Tabellenbezeichner aus dieser Datenbank. Die Bezeichner sind dabei aufsteigend sortiert.
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Tabellen in dieser Datenbank und f(N) =
-     * ??? TODO.
+     * N.
      *
      * @return aufsteigend sortierte Liste der Tabellenbezeichner
      */
     public List<String> getTableIds() {
-        // TODO: Implementierung
+        return new ArrayList<>(this.tables.keySet());
     }
 
     /**
@@ -91,7 +102,7 @@ public final class DB {
      * enthält, liefert die Anfrage mit from="T" to="V" die Namen "Tee_Sorte" und "Tee_Kategorie".
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Tabellen in dieser Datenbank und f(N) =
-     * ??? TODO.
+     * N.
      *
      * @param from Untere Grenze des Suchbereiches (inklusive)
      * @param to   Obere Grenze des Suchbereiches (exklusive)
@@ -107,7 +118,17 @@ public final class DB {
     public List<String> getTableIdsBetween(String from, String to) {
         assert from != null : "from is null";
         assert to != null : "to is null";
-        // TODO: Implementierung
+        assert Util.isValidIdentifier(from) : "from invalid";
+        assert Util.isValidIdentifier(to) : "to invalid";
+        assert from.compareTo(to) < 0 : "from must be smaller than to";
+
+        List<String> result = new ArrayList<>();
+        for (String key : this.tables.keySet()) {
+            if (key.compareTo(from) >= 0 && key.compareTo(to) < 0) {
+                result.add(key);
+            }
+        }
+        return result;
     }
 
     /**
@@ -118,7 +139,7 @@ public final class DB {
      * nach "Tee_" die Tabelle mit dem Bezeichner "Tee_Kategorie".
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Tabellen in dieser Datenbank und f(N) =
-     * ??? TODO.
+     * N.
      *
      * @param prefix Präfix des Tabellenbezeichners
      *
@@ -131,14 +152,21 @@ public final class DB {
      */
     public DBTable getFirstTableWithPrefix(String prefix) {
         assert prefix != null : "prefix is null";
-        // TODO: Implementierung
+        assert Util.isValidIdentifier(prefix) : "prefix invalid";
+
+        for (Map.Entry<String, DBTable> entry : this.tables.entrySet()) {
+            if (entry.getKey().startsWith(prefix)) {
+                return entry.getValue();
+            }
+        }
+        return null;
     }
 
     /**
      * Gibt an, ob eine Tabelle mit dem übergebenen Tabellenbezeichner in dieser Datenbank existiert.
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Tabellen in dieser Datenbank und f(N) =
-     * ??? TODO.
+     * log(N).
      *
      * @param tableId Tabellenbezeichner der Tabelle, deren Existenz geprüft werden soll
      *
@@ -149,14 +177,15 @@ public final class DB {
      */
     public boolean hasTable(String tableId) {
         assert tableId != null : "tableId is null";
-        // TODO: Implementierung
+        assert Util.isValidIdentifier(tableId) : "tableId invalid";
+        return this.tables.containsKey(tableId);
     }
 
     /**
      * Fügt die übergebene Tabelle in diese Datenbank ein.
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Tabellen in dieser Datenbank und f(N) =
-     * ??? TODO.
+     * log(N).
      *
      * @param table Tabelle, die eingefügt werden soll
      *
@@ -165,14 +194,15 @@ public final class DB {
      */
     public void addTable(DBTable table) {
         assert table != null : "table is null";
-        // TODO: Implementierung
+        assert !this.tables.containsKey(table.getId()) : "table already exists";
+        this.tables.put(table.getId(), table);
     }
 
     /**
      * Entfernt die Tabelle mit dem übergebenen Tabellenbezeichner aus dieser Datenbank.
      * <p>
      * Diese Methode arbeitet in O(f(N)), dabei ist N = Anzahl der vorhandenen Tabellen in dieser Datenbank und f(N) =
-     * ??? TODO.
+     * log(N).
      *
      * @param tableId Tabellenbezeichner der zu entfernenden Tabelle
      *
@@ -182,14 +212,15 @@ public final class DB {
      */
     public void removeTable(String tableId) {
         assert tableId != null : "tableId is null";
-        // TODO: Implementierung
+        assert Util.isValidIdentifier(tableId) : "tableId invalid";
+        this.tables.remove(tableId);
     }
 
     /**
      * Entfernt alle Tabellen aus dieser Datenbank.
      */
     public void removeAllTables() {
-        // TODO: Implementierung
+        this.tables.clear();
     }
 
     /**
@@ -236,6 +267,13 @@ public final class DB {
      */
     @Override
     public String toString() {
-        // TODO: Implementierung
+        StringBuilder builder = new StringBuilder();
+        builder.append("Datenbankbezeichner: ").append(this.id).append('\n').append('\n');
+
+        for (DBTable table : this.tables.values()) {
+            builder.append(table.toString()).append('\n');
+        }
+
+        return builder.toString();
     }
 }
